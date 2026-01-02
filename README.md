@@ -1,7 +1,8 @@
 #  Minecomic
 
-> 基于 React + FastAPI 构建的高性能、全离线本地漫画管理与阅读系统。
-**100%原汁原味纯AI开发**感谢Gemini支持
+> 基于 React + FastAPI 构建的高性能、全离线本地漫画管理与阅读系统。 
+**100%原汁原味纯AI开发**感谢Gemini支持 
+
 **Minecomic** 界面
 
 主界面<img width="2560" height="1600" alt="a30af4e9-fb3e-4faf-abc6-171b6548fa49" src="https://github.com/user-attachments/assets/dc06baa9-fb78-4216-a4de-13c3b0affc65" />
