@@ -1,0 +1,23 @@
+
+# JMComic 配置文件
+# 请修改下面的用户名和密码
+
+client:
+  domain: [] # 留空会自动获取可用域名
+  username: "" # 【必填】你的 JMComic 用户名
+  password: "" # 【必填】你的 JMComic 密码
+  
+download:
+  # 图片保存目录
+  # 建议设置为你前端 Importer 容易找到的目录
+  dir_rule:
+    base_dir: "./downloads" # 所有的漫画会下载到当前目录下的 downloads 文件夹
+    rule: Bd_Pname # 目录命名规则：本子ID_本子名称
+  
+  image:
+    suffix: ".jpg" # 图片后缀
+
+# 插件配置 (可选)
+plugins:
+  after_album:
+    - key: usage_log # 打印下载日志
