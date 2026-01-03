@@ -15,6 +15,18 @@ export const updateMetadata = async (id: string, data: any) => {
     }
 };
 
+export const updateBatchMetadata = async (updates: any[]) => {
+    try {
+        await fetch(`${API_URL}/update_metadata_batch`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ updates })
+        });
+    } catch (e) {
+        console.error("Failed to batch update metadata", e);
+    }
+};
+
 export const saveProgress = async (progress: ReadingProgress) => {
     // Save progress as part of metadata
     await updateMetadata(progress.mangaId, { 

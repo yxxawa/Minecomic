@@ -50,14 +50,14 @@ export const MangaDetail: React.FC<MangaDetailProps> = ({ manga, isOpen, onClose
 
   return (
     <div 
-      className={`fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 transition-all duration-300 ease-out ${isVisible ? 'bg-slate-900/40 backdrop-blur-md opacity-100' : 'bg-slate-900/0 backdrop-blur-none opacity-0'}`}
+      className={`fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 transition-all duration-500 ease-out ${isVisible ? 'bg-slate-900/40 backdrop-blur-md opacity-100' : 'bg-slate-900/0 backdrop-blur-none opacity-0'}`}
       onClick={handleClose}
     >
       {/* Main Card Container */}
       <div 
         className={`
             relative w-full max-w-5xl h-[80vh] max-h-[650px] bg-white rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col md:flex-row
-            transform transition-all duration-500 cubic-bezier(0.32, 0.72, 0, 1)
+            transform transition-all duration-500 cubic-bezier(0.34, 1.56, 0.64, 1)
             ${isVisible ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-12 opacity-0 scale-95'}
         `}
         onClick={(e) => e.stopPropagation()}
@@ -149,7 +149,7 @@ export const MangaDetail: React.FC<MangaDetailProps> = ({ manga, isOpen, onClose
                             <div className="col-span-2 text-center py-2">
                                 <button 
                                     onClick={() => setIsExpanded(true)}
-                                    className="text-xs text-slate-400 hover:text-sky-600 font-bold bg-slate-50 hover:bg-sky-50 px-4 py-1.5 rounded-full transition-colors"
+                                    className="text-xs text-slate-400 hover:text-sky-600 font-bold bg-slate-50 hover:bg-sky-50 px-4 py-1.5 rounded-full transition-colors active:scale-95"
                                 >
                                     ↓ 还有 {manga.chapters.length - 8} 个章节
                                 </button>
@@ -164,7 +164,7 @@ export const MangaDetail: React.FC<MangaDetailProps> = ({ manga, isOpen, onClose
            <div className="flex-shrink-0 p-8 md:p-10 pt-4 md:pt-4 bg-white/95 backdrop-blur-sm border-t border-slate-50 flex items-center gap-4 z-10">
               <Button 
                 onClick={() => onStartReading(manga)}
-                className="flex-1 py-4 text-base shadow-xl shadow-sky-200/50 hover:shadow-sky-300/50 rounded-2xl transition-all hover:-translate-y-1 bg-sky-500 hover:bg-sky-600 text-white font-bold"
+                className="flex-1 py-4 text-base shadow-xl shadow-sky-200/50 hover:shadow-sky-300/50 rounded-2xl transition-all hover:-translate-y-1 bg-sky-500 hover:bg-sky-600 text-white font-bold active:scale-[0.98]"
                 icon={isStarted ? <RotateCcw className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current" />}
               >
                  {isStarted ? "继续阅读" : "开始阅读"}

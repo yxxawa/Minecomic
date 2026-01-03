@@ -32,6 +32,7 @@ export interface Manga {
   // Enhanced Metadata
   author?: string;
   keywords?: string[];
+  collectionIds?: string[]; // IDs of collections this manga belongs to
 }
 
 export enum ViewMode {
@@ -53,6 +54,11 @@ export interface ReadingProgress {
 
 export type SortOption = 'NAME' | 'DATE_ADDED' | 'RECENTLY_READ' | 'MOST_READ';
 
+export interface Collection {
+  id: string;
+  name: string;
+}
+
 export interface AppSettings {
   theme: 'gentle' | 'fresh' | 'playful';
   enableScrollTurn: boolean;
@@ -60,6 +66,8 @@ export interface AppSettings {
   readerBackgroundColor: string; // New setting for reader background
   longPressDuration: number; // New setting for drag delay
   toggleMenuKey: string; // New setting for reader menu toggle
+  enableDownloadPopup: boolean; // New: Toggle homepage download notification
+  collections: Collection[]; // List of user created collections
 }
 
 export interface AIAnalysisResult {

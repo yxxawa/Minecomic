@@ -12,23 +12,27 @@ interface SettingsModalProps {
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings, onUpdateSettings, onSyncLibrary }) => {
   const [listeningTarget, setListeningTarget] = useState<'panicKey' | 'toggleMenuKey' | null>(null);
-  const [isClosing, setIsClosing] = useState(false);
-  const [shouldRender, setShouldRender] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  
+  // Animation State
+  const [isVisible, setIsVisible] = useState(false);
+  const [shouldRender, setShouldRender] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
         setShouldRender(true);
-        setIsClosing(false);
+        // Use setTimeout to ensure initial render completes before transition starts
+        const timer = setTimeout(() => setIsVisible(true), 50);
+        return () => clearTimeout(timer);
+    } else {
+        setIsVisible(false);
+        const timer = setTimeout(() => setShouldRender(false), 300);
+        return () => clearTimeout(timer);
     }
   }, [isOpen]);
 
   const handleClose = () => {
-      setIsClosing(true);
-      setTimeout(() => {
-          setShouldRender(false);
-          onClose();
-      }, 300);
+      onClose(); // Triggers the effect above to start close animation
   };
 
   // Key Listener for binding
@@ -51,7 +55,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, s
   }, [listeningTarget, settings, onUpdateSettings]);
 
   const handleSyncTitles = async () => {
-      if (!confirm("确定要根据文件夹名称同步漫画标题吗？\n这将覆盖现有的标题设置。\n\n规则：使用漫画ID文件夹内第一个子文件夹的名称作为漫画标题。")) return;
+      if (!confirm("确定要同步漫画标题吗？\n这将获取漫画目录下的第一个子文件夹名称作为标题。\n\n适用于 ID 显示为标题的情况。")) return;
       
       setIsSyncing(true);
       try {
@@ -70,7 +74,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, s
       }
   };
 
-  if (!shouldRender && !isOpen) return null;
+  if (!shouldRender) return null;
 
   const toggleScrollTurn = () => {
     onUpdateSettings({ ...settings, enableScrollTurn: !settings.enableScrollTurn });
@@ -91,11 +95,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, s
 
   return (
     <div 
-        className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm transition-opacity duration-300 ${isClosing ? 'opacity-0' : 'opacity-100 animate-fade-in'}`}
+        className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm transition-opacity duration-300 ease-in-out ${isVisible ? 'opacity-100' : 'opacity-0'}`}
         onClick={handleClose}
     >
       <div 
-        className={`bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden ring-1 ring-white/20 transition-all duration-300 transform ${isClosing ? 'scale-95 translate-y-4 opacity-0' : 'scale-100 translate-y-0 opacity-100 animate-slide-up'}`}
+        className={`bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden ring-1 ring-white/20 transition-all duration-300 ease-in-out transform ${isVisible ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-4 opacity-0'}`}
         onClick={e => e.stopPropagation()}
       >
         <div className="px-8 py-6 border-b border-slate-50 flex justify-between items-center bg-white">
@@ -158,7 +162,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, s
                     </div>
                     <div>
                         <p className="text-sm font-bold text-slate-700">同步漫画标题</p>
-                        <p className="text-xs font-medium text-slate-400 mt-0.5">从文件夹名称读取并更新漫画标题</p>
+                        <p className="text-xs font-medium text-slate-400 mt-0.5">自动修复标题显示问题</p>
                     </div>
                 </div>
                 <button 
@@ -166,14 +170,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, s
                     disabled={isSyncing}
                     className="w-full py-2 bg-white hover:bg-sky-50 text-slate-600 hover:text-sky-600 border border-slate-200 hover:border-sky-200 rounded-xl transition-all text-xs font-bold shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                    {isSyncing ? "正在同步..." : "执行同步 (覆盖现有标题)"}
+                    {isSyncing ? "正在同步..." : "执行同步"}
                 </button>
             </div>
           </div>
 
-          {/* Reader Settings Section */}
+          {/* Reader & Notification Settings Section */}
           <div>
-            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 ml-1">阅读器偏好</h4>
+            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 ml-1">偏好设置</h4>
             
             <div className="space-y-3">
                 {/* Scroll Turn */}

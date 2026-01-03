@@ -513,7 +513,7 @@ export const Reader: React.FC<ReaderProps> = ({
         backgroundColor: backgroundColor,
       }}
     >
-      <div className="absolute inset-0 pointer-events-none z-[60]" style={{ backgroundColor: `rgba(0,0,0, ${1 - brightness / 100})` }} />
+      <div className={`absolute inset-0 pointer-events-none z-[60] transition-opacity duration-1000`} style={{ backgroundColor: `rgba(0,0,0, ${1 - brightness / 100})` }} />
 
       {/* Floating Menu Trigger */}
       <button
@@ -525,11 +525,11 @@ export const Reader: React.FC<ReaderProps> = ({
 
       {/* Top Controls */}
       <div 
-        className={`absolute top-0 left-0 right-0 h-16 bg-white/90 backdrop-blur-xl border-b border-sky-100 shadow-sm z-[70] flex items-center justify-between px-6 transition-transform duration-300 ${showControls ? 'translate-y-0' : '-translate-y-full'}`}
+        className={`absolute top-0 left-0 right-0 h-16 bg-white/90 backdrop-blur-xl border-b border-sky-100 shadow-sm z-[70] flex items-center justify-between px-6 transition-transform duration-500 ease-[cubic-bezier(0.19,1,0.22,1)] ${showControls ? 'translate-y-0' : '-translate-y-full'}`}
         style={{ WebkitAppRegion: 'drag' } as any}
       >
         <div className="flex items-center gap-4">
-          <button onClick={onExit} className="text-slate-500 hover:text-sky-600 p-2 rounded-full hover:bg-sky-50 transition-colors" style={{ WebkitAppRegion: 'no-drag' } as any}>
+          <button onClick={onExit} className="text-slate-500 hover:text-sky-600 p-2 rounded-full hover:bg-sky-50 transition-colors active:scale-95" style={{ WebkitAppRegion: 'no-drag' } as any}>
             <ArrowLeft className="w-6 h-6" />
           </button>
           <div className="flex flex-col">
@@ -539,23 +539,23 @@ export const Reader: React.FC<ReaderProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
-            <button onClick={(e) => { e.stopPropagation(); setMode(ReaderMode.Single); }} className={`p-2 rounded-xl transition-all ${mode === ReaderMode.Single ? 'bg-sky-500 text-white shadow-lg shadow-sky-200' : 'text-slate-400 hover:text-sky-600 hover:bg-sky-50'}`} title="单页模式" style={{ WebkitAppRegion: 'no-drag' } as any}>
+            <button onClick={(e) => { e.stopPropagation(); setMode(ReaderMode.Single); }} className={`p-2 rounded-xl transition-all duration-300 active:scale-95 ${mode === ReaderMode.Single ? 'bg-sky-500 text-white shadow-lg shadow-sky-200' : 'text-slate-400 hover:text-sky-600 hover:bg-sky-50'}`} title="单页模式" style={{ WebkitAppRegion: 'no-drag' } as any}>
                 <div className="w-4 h-6 border-2 border-current rounded-[1px] m-1" />
             </button>
-            <button onClick={(e) => { e.stopPropagation(); setMode(ReaderMode.Double); }} className={`p-2 rounded-xl transition-all ${mode === ReaderMode.Double ? 'bg-sky-500 text-white shadow-lg shadow-sky-200' : 'text-slate-400 hover:text-sky-600 hover:bg-sky-50'}`} title="双页模式" style={{ WebkitAppRegion: 'no-drag' } as any}>
+            <button onClick={(e) => { e.stopPropagation(); setMode(ReaderMode.Double); }} className={`p-2 rounded-xl transition-all duration-300 active:scale-95 ${mode === ReaderMode.Double ? 'bg-sky-500 text-white shadow-lg shadow-sky-200' : 'text-slate-400 hover:text-sky-600 hover:bg-sky-50'}`} title="双页模式" style={{ WebkitAppRegion: 'no-drag' } as any}>
                 <div className="flex gap-0.5 m-1">
                     <div className="w-3 h-5 border-2 border-current rounded-[1px]" />
                     <div className="w-3 h-5 border-2 border-current rounded-[1px]" />
                 </div>
             </button>
-             <button onClick={(e) => { e.stopPropagation(); setMode(ReaderMode.Vertical); }} className={`p-2 rounded-xl transition-all ${mode === ReaderMode.Vertical ? 'bg-sky-500 text-white shadow-lg shadow-sky-200' : 'text-slate-400 hover:text-sky-600 hover:bg-sky-50'}`} title="垂直滚动" style={{ WebkitAppRegion: 'no-drag' } as any}>
+             <button onClick={(e) => { e.stopPropagation(); setMode(ReaderMode.Vertical); }} className={`p-2 rounded-xl transition-all duration-300 active:scale-95 ${mode === ReaderMode.Vertical ? 'bg-sky-500 text-white shadow-lg shadow-sky-200' : 'text-slate-400 hover:text-sky-600 hover:bg-sky-50'}`} title="垂直滚动" style={{ WebkitAppRegion: 'no-drag' } as any}>
                  <div className="flex flex-col gap-0.5 m-1">
                     <div className="w-5 h-3 border-2 border-current rounded-[1px]" />
                     <div className="w-5 h-3 border-2 border-current rounded-[1px]" />
                 </div>
             </button>
             <div className="w-px h-6 bg-slate-200 mx-2" />
-            <button onClick={(e) => { e.stopPropagation(); setShowSidebar(!showSidebar); }} className={`p-2 rounded-xl transition-all ${showSidebar ? 'bg-sky-100 text-sky-600' : 'text-slate-400 hover:text-sky-600 hover:bg-sky-50'}`} style={{ WebkitAppRegion: 'no-drag' } as any}>
+            <button onClick={(e) => { e.stopPropagation(); setShowSidebar(!showSidebar); }} className={`p-2 rounded-xl transition-all duration-300 active:scale-95 ${showSidebar ? 'bg-sky-100 text-sky-600' : 'text-slate-400 hover:text-sky-600 hover:bg-sky-50'}`} style={{ WebkitAppRegion: 'no-drag' } as any}>
                 <Settings className="w-5 h-5" />
             </button>
         </div>
@@ -573,14 +573,14 @@ export const Reader: React.FC<ReaderProps> = ({
         tabIndex={-1}
       >
         <div
-            className={`w-full ${mode === ReaderMode.Vertical ? 'min-h-full items-start pt-20 pb-20' : 'h-full items-center'} flex justify-center origin-center will-change-transform`}
+            className={`w-full ${mode === ReaderMode.Vertical ? 'min-h-full items-start pt-20 pb-20' : 'h-full items-center'} flex justify-center origin-center will-change-transform transform-gpu`}
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
             onPointerLeave={handlePointerUp}
             style={{
                 transform: mode === ReaderMode.Vertical ? 'none' : `translate(${pan.x}px, ${pan.y}px) scale(${zoom / 100})`,
-                transition: isDragging ? 'none' : 'transform 0.3s cubic-bezier(0.25, 1, 0.5, 1)',
+                transition: isDragging ? 'none' : 'transform 0.5s cubic-bezier(0.19, 1, 0.22, 1)',
                 cursor: isDragging ? 'grabbing' : 'default'
             }}
         >
@@ -599,7 +599,7 @@ export const Reader: React.FC<ReaderProps> = ({
                         {currentChapterIndex < manga.chapters.length - 1 ? (
                              <button 
                                 onClick={(e) => { e.stopPropagation(); handleNextChapterVertical(); }}
-                                className="px-8 py-3 bg-white/10 hover:bg-white/20 text-white border border-white/20 rounded-full transition-all font-medium backdrop-blur-sm z-50 cursor-pointer"
+                                className="px-8 py-3 bg-white/10 hover:bg-white/20 text-white border border-white/20 rounded-full transition-all font-medium backdrop-blur-sm z-50 cursor-pointer active:scale-95"
                              >
                                 下一章
                              </button>
@@ -659,14 +659,14 @@ export const Reader: React.FC<ReaderProps> = ({
       {/* Sidebar Settings */}
       <div 
         onClick={(e) => e.stopPropagation()}
-        className={`absolute right-0 top-0 bottom-0 w-80 bg-white/95 backdrop-blur-2xl border-l border-sky-100 shadow-2xl z-[80] transform transition-transform duration-300 p-6 flex flex-col ${showSidebar ? 'translate-x-0' : 'translate-x-full'}`}
+        className={`absolute right-0 top-0 bottom-0 w-80 bg-white/95 backdrop-blur-2xl border-l border-sky-100 shadow-2xl z-[80] transform-gpu transition-transform duration-500 cubic-bezier(0.19,1,0.22,1) p-6 flex flex-col will-change-transform ${showSidebar ? 'translate-x-0' : 'translate-x-full'}`}
       >
           <div className="flex justify-between items-center mb-8 flex-shrink-0">
               <h3 className="text-slate-800 font-extrabold text-lg flex items-center gap-2">
                  <Settings className="w-5 h-5 text-sky-500" />
                  阅读设置
               </h3>
-              <button onClick={() => setShowSidebar(false)} className="text-slate-400 hover:text-sky-600 p-1 hover:bg-sky-50 rounded-lg transition-colors">
+              <button onClick={() => setShowSidebar(false)} className="text-slate-400 hover:text-sky-600 p-1 hover:bg-sky-50 rounded-lg transition-colors active:scale-90">
                   <ArrowLeft className="w-5 h-5 rotate-180" />
               </button>
           </div>
@@ -691,7 +691,7 @@ export const Reader: React.FC<ReaderProps> = ({
               </div>
 
               <div className="pt-6 border-t border-slate-100">
-                  <button onClick={toggleFullscreen} className="w-full py-3 bg-sky-50 text-sky-600 hover:bg-sky-100 hover:text-sky-700 rounded-xl transition-all flex items-center justify-center gap-2 font-bold shadow-sm">
+                  <button onClick={toggleFullscreen} className="w-full py-3 bg-sky-50 text-sky-600 hover:bg-sky-100 hover:text-sky-700 rounded-xl transition-all flex items-center justify-center gap-2 font-bold shadow-sm active:scale-95">
                     {isFullscreen ? <Minimize2 className="w-4 h-4"/> : <Maximize2 className="w-4 h-4"/>}
                     {isFullscreen ? '退出全屏' : '进入全屏'}
                   </button>
@@ -708,7 +708,7 @@ export const Reader: React.FC<ReaderProps> = ({
                       <button 
                         key={chap.id}
                         onClick={() => { setCurrentChapterIndex(idx); setCurrentPageIndex(0); if(containerRef.current) containerRef.current.scrollTop = 0; }}
-                        className={`w-full text-left px-4 py-3 text-sm rounded-xl transition-all border ${idx === currentChapterIndex ? 'bg-sky-50 text-sky-700 border-sky-100 shadow-sm font-bold' : 'text-slate-600 border-transparent hover:bg-slate-50 hover:text-slate-900'}`}
+                        className={`w-full text-left px-4 py-3 text-sm rounded-xl transition-all border active:scale-[0.98] ${idx === currentChapterIndex ? 'bg-sky-50 text-sky-700 border-sky-100 shadow-sm font-bold' : 'text-slate-600 border-transparent hover:bg-slate-50 hover:text-slate-900'}`}
                       >
                           <div className="truncate">{chap.title}</div>
                           <div className={`text-xs mt-0.5 ${idx === currentChapterIndex ? 'text-sky-400' : 'text-slate-400'}`}>{chap.pages.length} 页</div>
@@ -719,11 +719,11 @@ export const Reader: React.FC<ReaderProps> = ({
       </div>
 
       {/* Bottom Progress Bar - Fixed Interaction */}
-      <div className={`absolute bottom-0 left-0 right-0 h-20 bg-white/90 backdrop-blur-xl border-t border-sky-100 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)] z-[70] flex items-center px-4 md:px-8 gap-4 md:gap-6 transition-transform duration-300 ${showControls ? 'translate-y-0' : 'translate-y-full'}`}>
+      <div className={`absolute bottom-0 left-0 right-0 h-20 bg-white/90 backdrop-blur-xl border-t border-sky-100 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)] z-[70] flex items-center px-4 md:px-8 gap-4 md:gap-6 transition-transform duration-500 ease-[cubic-bezier(0.19,1,0.22,1)] ${showControls ? 'translate-y-0' : 'translate-y-full'}`}>
          {/* Close Button Inside Bar */}
          <button
             onClick={(e) => { e.stopPropagation(); setShowControls(false); }}
-            className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-full transition-colors flex-shrink-0"
+            className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-full transition-colors flex-shrink-0 active:scale-90"
          >
             <X className="w-6 h-6" />
          </button>
@@ -735,13 +735,13 @@ export const Reader: React.FC<ReaderProps> = ({
          <div className="flex-1 relative h-6 group cursor-pointer flex items-center">
              <div className="absolute inset-0 top-1/2 -translate-y-1/2 h-2 bg-slate-200 rounded-full"></div>
              <div 
-                className="absolute left-0 top-1/2 -translate-y-1/2 h-2 bg-sky-500 rounded-full" 
+                className="absolute left-0 top-1/2 -translate-y-1/2 h-2 bg-sky-500 rounded-full transition-all duration-75 ease-linear" 
                 style={{ width: `${((currentPageIndex) / (totalPages - 1 || 1)) * 100}%` }}
              >
              </div>
              {/* Thumb Visualization */}
              <div 
-                className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-white border-2 border-sky-500 rounded-full shadow-md transition-transform transform group-hover:scale-125 z-10 pointer-events-none"
+                className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-white border-2 border-sky-500 rounded-full shadow-md transition-all transform group-hover:scale-150 z-10 pointer-events-none duration-75 ease-linear"
                 style={{ left: `calc(${((currentPageIndex) / (totalPages - 1 || 1)) * 100}% - 8px)` }}
              ></div>
              

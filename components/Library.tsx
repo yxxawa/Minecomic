@@ -1,11 +1,12 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Grid, Clock, ChevronDown, Flame } from 'lucide-react';
-import { Manga, SortOption, ViewMode } from '../types';
+import { Grid, Clock, ChevronDown, Flame, CheckSquare, X } from 'lucide-react';
+import { Manga, SortOption, ViewMode, Collection } from '../types';
 import { ContextMenu } from './ContextMenu';
 
-// -- Lazy Cover Component --
+// -- Lazy Cover Component with smoother fade --
 const LazyCover: React.FC<{ src: string; alt: string; className: string }> = ({ src, alt, className }) => {
     const [isVisible, setIsVisible] = useState(false);
+    const [isLoaded, setIsLoaded] = useState(false);
     const imgRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -23,11 +24,14 @@ const LazyCover: React.FC<{ src: string; alt: string; className: string }> = ({ 
     }, []);
 
     return (
-        <div ref={imgRef} className="w-full h-full">
-            {isVisible ? (
-                <img src={src} alt={alt} className={className} />
-            ) : (
-                <div className="w-full h-full bg-slate-100 animate-pulse" />
+        <div ref={imgRef} className="w-full h-full bg-slate-100 overflow-hidden relative">
+            {isVisible && (
+                <img 
+                    src={src} 
+                    alt={alt} 
+                    className={`${className} transition-opacity duration-700 ease-out ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
+                    onLoad={() => setIsLoaded(true)}
+                />
             )}
         </div>
     );
@@ -36,17 +40,21 @@ const LazyCover: React.FC<{ src: string; alt: string; className: string }> = ({ 
 interface LibraryProps {
   mangas: Manga[];
   onOpenManga: (manga: Manga) => void;
-  onOpenImport: () => void; // Deprecated but kept to avoid breaking existing usages in App.tsx briefly if any
+  onOpenImport: () => void; 
   onUpdateManga: (updatedManga: Manga) => void;
+  onBatchUpdateManga: (updates: Manga[]) => void;
   onDeleteManga: (id: string) => void;
   onRenameManga: (id: string, newName: string) => void;
   onToggleRead: (id: string) => void;
+  collections: Collection[];
+  activeCollectionId: string | null;
 }
 
-export const Library: React.FC<LibraryProps> = ({ mangas, onOpenManga, onUpdateManga, onDeleteManga, onRenameManga, onToggleRead }) => {
-  // Always default to Grid, no toggle needed anymore
-  const viewMode = ViewMode.Grid;
-  
+export const Library: React.FC<LibraryProps> = ({ 
+    mangas, onOpenManga, onUpdateManga, onBatchUpdateManga, onDeleteManga, onRenameManga, onToggleRead, collections, activeCollectionId
+}) => {
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
   const [sortBy, setSortBy] = useState<SortOption>(() => {
     const saved = localStorage.getItem('manga_nexus_sort_by');
     return (saved as SortOption) || 'DATE_ADDED';
@@ -56,7 +64,20 @@ export const Library: React.FC<LibraryProps> = ({ mangas, onOpenManga, onUpdateM
     localStorage.setItem('manga_nexus_sort_by', sortBy);
   }, [sortBy]);
 
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; mangaId: string } | null>(null);
+  // Reset scroll position when switching collections
+  useEffect(() => {
+      if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTop = 0;
+      }
+  }, [activeCollectionId]);
+
+  // Selection State
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const lastSelectedIdRef = useRef<string | null>(null);
+  
+  // Context Menu State
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
 
   const filteredMangas = useMemo(() => {
     let result = [...mangas];
@@ -72,25 +93,162 @@ export const Library: React.FC<LibraryProps> = ({ mangas, onOpenManga, onUpdateM
     return result;
   }, [mangas, sortBy]);
 
+  // Handle Global Click to Clear Selection
+  useEffect(() => {
+      const handleGlobalClick = () => {
+          // Logic handled via explicit handlers to avoid react event bubbling issues
+      };
+      window.addEventListener('click', handleGlobalClick);
+      return () => window.removeEventListener('click', handleGlobalClick);
+  }, [contextMenu]);
+
+  // Exit selection mode if no items selected (optional, but requested "Operate once then cancel", manual cancel also useful)
+  const exitSelectionMode = () => {
+      setIsSelectionMode(false);
+      setSelectedIds(new Set());
+      lastSelectedIdRef.current = null;
+  };
+
+  const handleCardClick = (e: React.MouseEvent, mangaId: string) => {
+    e.stopPropagation(); // Prevent global clear
+
+    if (isSelectionMode || e.ctrlKey || e.metaKey) {
+        // Toggle Selection in Multi-select Mode
+        const newSet = new Set(selectedIds);
+        if (newSet.has(mangaId)) newSet.delete(mangaId);
+        else newSet.add(mangaId);
+        setSelectedIds(newSet);
+        lastSelectedIdRef.current = mangaId;
+    } else if (e.shiftKey && lastSelectedIdRef.current) {
+        // Range Selection
+        const startIdx = filteredMangas.findIndex(m => m.id === lastSelectedIdRef.current);
+        const endIdx = filteredMangas.findIndex(m => m.id === mangaId);
+        if (startIdx !== -1 && endIdx !== -1) {
+            const low = Math.min(startIdx, endIdx);
+            const high = Math.max(startIdx, endIdx);
+            const newSet = new Set(selectedIds);
+            for (let i = low; i <= high; i++) {
+                newSet.add(filteredMangas[i].id);
+            }
+            setSelectedIds(newSet);
+        }
+    } else {
+        // Standard Click - Open Book
+        // If we have a selection but not in explicit "Selection Mode", clicking another item clears selection and opens it
+        if (selectedIds.size > 0) {
+             setSelectedIds(new Set());
+        }
+        const manga = mangas.find(m => m.id === mangaId);
+        if (manga) onOpenManga(manga);
+    }
+  };
+
   const handleContextMenu = (e: React.MouseEvent, mangaId: string) => {
     e.preventDefault();
-    e.stopPropagation(); // Ensure explicit right click works even if global is disabled
-    setContextMenu({ x: e.clientX, y: e.clientY, mangaId });
+    e.stopPropagation();
+    
+    // If the item isn't in the current selection, select ONLY it (unless we are in multi-mode, then add it)
+    if (!selectedIds.has(mangaId)) {
+        if (isSelectionMode) {
+            const newSet = new Set(selectedIds);
+            newSet.add(mangaId);
+            setSelectedIds(newSet);
+        } else {
+            setSelectedIds(new Set([mangaId]));
+        }
+        lastSelectedIdRef.current = mangaId;
+    }
+    
+    setContextMenu({ x: e.clientX, y: e.clientY });
   };
 
-  const handlePin = (mangaId: string) => {
-    const manga = mangas.find(m => m.id === mangaId);
-    if (manga) onUpdateManga({ ...manga, isPinned: !manga.isPinned });
-  };
-
-  const handleDelete = (mangaId: string) => {
-    if (window.confirm("确定要将此漫画从书架移除吗？")) onDeleteManga(mangaId);
+  const handleBackgroundClick = () => {
+      if (!isSelectionMode) {
+          setSelectedIds(new Set());
+      }
+      setContextMenu(null);
   }
 
+  // Batch Actions Helpers
+  const getSelectedMangas = () => filteredMangas.filter(m => selectedIds.has(m.id));
+
+  const finalizeAction = () => {
+      // "Operate once then cancel multi-select"
+      setIsSelectionMode(false);
+      setSelectedIds(new Set());
+  };
+
+  const handleBatchPin = () => {
+      const selected = getSelectedMangas();
+      const allPinned = selected.every(m => m.isPinned);
+      const updates = selected.map(m => ({ ...m, isPinned: !allPinned }));
+      onBatchUpdateManga(updates);
+      finalizeAction();
+  };
+
+  const handleBatchDelete = () => {
+      if (window.confirm(`确定要移除选中的 ${selectedIds.size} 项漫画吗？`)) {
+          selectedIds.forEach(id => onDeleteManga(id));
+          finalizeAction();
+      }
+  };
+
+  const handleBatchToggleRead = () => {
+      selectedIds.forEach(id => onToggleRead(id));
+      finalizeAction();
+  };
+
+  const handleBatchAddToCollection = (colId: string) => {
+      const selected = getSelectedMangas();
+      const updates: Manga[] = [];
+
+      selected.forEach(m => {
+          const currentCols = new Set(m.collectionIds || []);
+          // Strictly additive: If it exists, do nothing. If not, add it.
+          if (!currentCols.has(colId)) {
+              currentCols.add(colId);
+              // Important: We send the whole manga object, which App.tsx will use to sync title as well
+              updates.push({ ...m, collectionIds: Array.from(currentCols) });
+          }
+      });
+      
+      if (updates.length > 0) {
+          onBatchUpdateManga(updates);
+      }
+      finalizeAction();
+  };
+
+  const handleBatchRemoveFromCollection = () => {
+      if (!activeCollectionId) return;
+      const selected = getSelectedMangas();
+      const updates: Manga[] = [];
+
+      selected.forEach(m => {
+          if (m.collectionIds?.includes(activeCollectionId)) {
+              updates.push({
+                  ...m,
+                  collectionIds: m.collectionIds.filter(id => id !== activeCollectionId)
+              });
+          }
+      });
+
+      if (updates.length > 0) {
+          onBatchUpdateManga(updates);
+      }
+      finalizeAction();
+  };
+
+  // Props for single item menu display (fallback)
+  const firstSelectedManga = getSelectedMangas()[0];
+
   return (
-    <div className="h-full overflow-y-auto custom-scrollbar p-8 pb-32">
+    <div 
+        ref={scrollContainerRef}
+        className="h-full overflow-y-auto custom-scrollbar p-8 pb-32" 
+        onClick={handleBackgroundClick}
+    >
       {/* Header / Filter Bar */}
-      <div className="flex justify-between items-center mb-10 sticky top-0 z-30 bg-white/40 backdrop-blur-xl py-6 -mt-8 px-4 rounded-b-3xl transition-all border-b border-white/40 shadow-sm animate-fade-in">
+      <div className="flex justify-between items-center mb-10 sticky top-0 z-30 bg-white/40 backdrop-blur-xl py-6 -mt-8 px-4 rounded-b-3xl transition-all border-b border-white/40 shadow-sm animate-fade-in" onClick={(e) => e.stopPropagation()}>
          <div className="flex items-center gap-4">
              <div className="bg-white/60 px-4 py-2 rounded-2xl shadow-sm border border-white/50 text-xs font-bold text-sky-700 tracking-wide">
                  藏书 • {filteredMangas.length}
@@ -101,7 +259,7 @@ export const Library: React.FC<LibraryProps> = ({ mangas, onOpenManga, onUpdateM
                     <button 
                         key={opt}
                         onClick={() => setSortBy(opt)}
-                        className={`text-[10px] font-bold px-3 py-1.5 rounded-xl transition-all uppercase tracking-wider ${sortBy === opt ? 'text-sky-700 bg-white shadow-sm scale-105' : 'text-slate-500 hover:text-slate-700 hover:bg-white/40'}`}
+                        className={`text-[10px] font-bold px-3 py-1.5 rounded-xl transition-all uppercase tracking-wider active:scale-95 ${sortBy === opt ? 'text-sky-700 bg-white shadow-sm scale-105' : 'text-slate-500 hover:text-slate-700 hover:bg-white/40'}`}
                     >
                         {opt === 'DATE_ADDED' && '时间'}
                         {opt === 'NAME' && '名称'}
@@ -111,80 +269,133 @@ export const Library: React.FC<LibraryProps> = ({ mangas, onOpenManga, onUpdateM
                 ))}
              </div>
          </div>
+         
+         {(selectedIds.size > 0 || isSelectionMode) && (
+             <div className="flex items-center gap-2 animate-fade-in">
+                 <div className={`text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-2 ${isSelectionMode ? 'bg-sky-500 text-white shadow-md shadow-sky-200' : 'text-sky-600 bg-sky-50'}`}>
+                     <CheckSquare className="w-3.5 h-3.5" />
+                     {isSelectionMode ? `多选模式: 已选 ${selectedIds.size} 项` : `已选中 ${selectedIds.size} 项`}
+                 </div>
+                 {isSelectionMode && (
+                     <button 
+                        onClick={exitSelectionMode}
+                        className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-500 transition-colors active:scale-90"
+                        title="退出多选"
+                     >
+                         <X className="w-3.5 h-3.5" />
+                     </button>
+                 )}
+             </div>
+         )}
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-x-8 gap-y-12 px-4">
         
-        {filteredMangas.map((manga, index) => (
-          <div 
-            key={manga.id}
-            className="group relative flex flex-col gap-4 cursor-pointer perspective-1000 animate-slide-up"
-            style={{ animationDelay: `${index * 50}ms`, opacity: 0 }} // Staggered delay
-            onClick={() => onOpenManga(manga)}
-            onContextMenu={(e) => handleContextMenu(e, manga.id)}
-          >
-            {/* Added style with WebkitMaskImage to fix border-radius glitch during transform animations on Chrome/Safari */}
+        {filteredMangas.map((manga, index) => {
+          const isSelected = selectedIds.has(manga.id);
+          return (
             <div 
-                className="aspect-[2/3] w-full relative rounded-[2rem] overflow-hidden shadow-[0_10px_30px_-10px_rgba(0,0,0,0.1)] bg-white transition-all duration-500 ease-out group-hover:-translate-y-3 group-hover:shadow-[0_25px_50px_-12px_rgba(var(--c-pri-500),0.3)] group-hover:rotate-1 ring-1 ring-black/5 transform-gpu"
-                style={{ WebkitMaskImage: '-webkit-radial-gradient(white, black)' }}
+                key={manga.id}
+                className={`group relative flex flex-col gap-4 cursor-pointer perspective-1000 animate-slide-up`}
+                style={{ animationDelay: `${Math.min(index * 30, 300)}ms` }}
+                onClick={(e) => handleCardClick(e, manga.id)}
+                onContextMenu={(e) => handleContextMenu(e, manga.id)}
             >
-               <LazyCover src={manga.coverUrl} alt={manga.title} className="w-full h-full object-cover transform transition-transform duration-700 ease-in-out group-hover:scale-110" />
-               
-               <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-               
-               {manga.isPinned && (
-                  <div className="absolute top-3 right-3 bg-white/90 text-sky-500 p-2 rounded-xl shadow-lg z-10 animate-bounce-soft backdrop-blur-sm">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M16 2H8C6.89543 2 6 2.89543 6 4V22L12 18L18 22V4C18 2.89543 17.1046 2 16 2Z"></path></svg>
-                  </div>
-               )}
+                <div 
+                    className={`aspect-[2/3] w-full relative rounded-[2rem] overflow-hidden shadow-[0_10px_30px_-10px_rgba(0,0,0,0.1)] bg-white transition-all duration-500 cubic-bezier(0.19,1,0.22,1) transform-gpu
+                    ${isSelected ? 'ring-4 ring-sky-400 scale-[0.98] -translate-y-1 shadow-xl' : 'group-hover:-translate-y-3 group-hover:shadow-[0_30px_60px_-15px_rgba(var(--c-pri-500),0.3)] group-hover:scale-[1.02] ring-1 ring-black/5 group-active:scale-95'}
+                    `}
+                    style={{ WebkitMaskImage: '-webkit-radial-gradient(white, black)' }}
+                >
+                <LazyCover src={manga.coverUrl} alt={manga.title} className="w-full h-full object-cover transform transition-transform duration-700 ease-out group-hover:scale-110" />
+                
+                <div className={`absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent transition-opacity duration-500 ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`} />
+                
+                {isSelected && (
+                    <div className="absolute top-3 left-3 bg-sky-500 text-white p-1.5 rounded-full shadow-lg z-20 animate-bounce-soft">
+                        <div className="w-2 h-2 bg-white rounded-full"></div>
+                    </div>
+                )}
+                
+                {/* Visual indicator for Multi-Select Mode when not selected, acting as a checkbox placeholder */}
+                {isSelectionMode && !isSelected && (
+                    <div className="absolute top-3 left-3 bg-slate-900/30 border-2 border-white/50 w-5 h-5 rounded-full z-20" />
+                )}
 
-               {/* Hover Action */}
-               <div className="absolute inset-x-0 bottom-6 flex justify-center opacity-0 group-hover:opacity-100 translate-y-4 group-hover:translate-y-0 transition-all duration-500 delay-75">
-                  <button className="bg-white/90 backdrop-blur-md text-slate-800 text-xs font-bold py-2.5 px-6 rounded-full shadow-xl hover:bg-sky-500 hover:text-white transition-colors">
-                      立即阅读
-                  </button>
-               </div>
-               
-               {manga.lastReadAt > 0 && (
-                   <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-slate-900/10 backdrop-blur-sm">
-                      <div className="h-full bg-sky-400 shadow-[0_0_15px_rgba(56,189,248,1)] rounded-r-full" style={{ width: '45%' }}></div>
-                   </div>
-               )}
-            </div>
+                {manga.isPinned && (
+                    <div className="absolute top-3 right-3 bg-white/90 text-sky-500 p-2 rounded-xl shadow-lg z-10 animate-bounce-soft backdrop-blur-sm">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M16 2H8C6.89543 2 6 2.89543 6 4V22L12 18L18 22V4C18 2.89543 17.1046 2 16 2Z"></path></svg>
+                    </div>
+                )}
 
-            <div className="px-2">
-                <h3 className="font-bold text-slate-700 leading-tight group-hover:text-sky-600 transition-colors text-sm line-clamp-2 mb-1">
-                    {manga.title}
-                </h3>
-                <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">{manga.totalChapters} 话</span>
-                    {manga.readCount > 0 && (
-                        <div className="flex items-center gap-1 text-[10px] font-bold text-orange-400 bg-orange-50 px-2 py-0.5 rounded-md">
-                           <Flame className="w-3 h-3" /> {manga.readCount}
-                        </div>
-                    )}
-                    {manga.lastReadAt > 0 && <Clock className="w-3 h-3 text-sky-300" />}
+                {/* Hover Action - Hide when selected or in multi-select mode */}
+                {!isSelected && !isSelectionMode && (
+                    <div className="absolute inset-x-0 bottom-6 flex justify-center opacity-0 group-hover:opacity-100 translate-y-4 group-hover:translate-y-0 transition-all duration-500 delay-75 ease-[cubic-bezier(0.19,1,0.22,1)]">
+                        <button className="bg-white/90 backdrop-blur-md text-slate-800 text-xs font-bold py-2.5 px-6 rounded-full shadow-xl hover:bg-sky-500 hover:text-white transition-colors">
+                            立即阅读
+                        </button>
+                    </div>
+                )}
+                
+                {manga.lastReadAt > 0 && (
+                    <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-slate-900/10 backdrop-blur-sm">
+                        <div className="h-full bg-sky-400 shadow-[0_0_15px_rgba(56,189,248,1)] rounded-r-full" style={{ width: '45%' }}></div>
+                    </div>
+                )}
+                </div>
+
+                <div className="px-2">
+                    <h3 className={`font-bold leading-tight transition-colors text-sm line-clamp-2 mb-1 ${isSelected ? 'text-sky-600' : 'text-slate-700 group-hover:text-sky-600'}`}>
+                        {manga.title}
+                    </h3>
+                    <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">{manga.totalChapters} 话</span>
+                        {manga.readCount > 0 && (
+                            <div className="flex items-center gap-1 text-[10px] font-bold text-orange-400 bg-orange-50 px-2 py-0.5 rounded-md">
+                            <Flame className="w-3 h-3" /> {manga.readCount}
+                            </div>
+                        )}
+                        {manga.lastReadAt > 0 && <Clock className="w-3 h-3 text-sky-300" />}
+                    </div>
                 </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {contextMenu && (
         <ContextMenu 
             {...contextMenu} 
+            selectedCount={selectedIds.size}
+            collections={collections}
+            activeCollectionId={activeCollectionId}
             onClose={() => setContextMenu(null)}
-            onPin={() => handlePin(contextMenu.mangaId)}
-            onDelete={() => handleDelete(contextMenu.mangaId)}
-            onRename={() => {
-                const manga = mangas.find(m => m.id === contextMenu.mangaId);
-                const newName = window.prompt("重命名漫画", manga?.title);
-                if (newName) onRenameManga(contextMenu.mangaId, newName);
+            onStartMultiSelect={() => {
+                setIsSelectionMode(true);
+                // Ensure the context menu item triggered selection of the item it was clicked on
+                // (This is handled in handleContextMenu, but good to ensure mode is set)
             }}
-            onToggleRead={() => onToggleRead(contextMenu.mangaId)}
-            isPinned={mangas.find(m => m.id === contextMenu.mangaId)?.isPinned || false}
-            isRead={(mangas.find(m => m.id === contextMenu.mangaId)?.lastReadAt || 0) > 0}
-            mangaTitle={mangas.find(m => m.id === contextMenu.mangaId)?.title || ''}
+            onPin={handleBatchPin}
+            onDelete={handleBatchDelete}
+            onRename={() => {
+                if (selectedIds.size === 1) {
+                    const manga = mangas.find(m => m.id === getSelectedMangas()[0].id);
+                    const newName = window.prompt("重命名漫画", manga?.title);
+                    if (newName) {
+                        onRenameManga(manga!.id, newName);
+                        finalizeAction();
+                    }
+                }
+            }}
+            onToggleRead={handleBatchToggleRead}
+            onAddToCollection={handleBatchAddToCollection}
+            onRemoveFromCollection={handleBatchRemoveFromCollection}
+            
+            // Single Item Fallbacks
+            isPinned={firstSelectedManga?.isPinned || false}
+            isRead={(firstSelectedManga?.lastReadAt || 0) > 0}
+            mangaTitle={firstSelectedManga?.title || ''}
+            currentCollectionIds={firstSelectedManga?.collectionIds}
         />
       )}
     </div>
